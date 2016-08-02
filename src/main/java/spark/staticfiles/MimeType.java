@@ -22,6 +22,8 @@ import java.util.Optional;
 
 import spark.resource.AbstractFileResolvingResource;
 
+import javax.servlet.http.HttpServletRequest;
+
 /**
  * Configures and holds mappings from file extensions to MIME types.
  */
@@ -95,8 +97,17 @@ public class MimeType {
     }
 
     public static String fromResource(AbstractFileResolvingResource resource) {
-        String filename = Optional.ofNullable(resource.getFilename()).orElse("");
-        String fileExtension = filename.replaceAll("^.*\\.(.*)$", "$1");
+        Optional<String> filename = Optional.ofNullable(resource.getFilename());
+        return fromFilename(filename);
+    }
+
+    public static String fromRequest(HttpServletRequest httpRequest) {
+        Optional<String> pathInfo = Optional.ofNullable(httpRequest.getPathInfo());
+        return fromFilename(pathInfo);
+    }
+
+    public static String fromFilename(Optional<String> filename) {
+        String fileExtension = filename.orElse("").replaceAll("^.*\\.(.*)$", "$1");
         return mappings.getOrDefault(fileExtension, "application/octet-stream");
     }
 

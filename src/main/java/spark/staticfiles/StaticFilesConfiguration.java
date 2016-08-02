@@ -108,6 +108,8 @@ public class StaticFilesConfiguration {
                 InputStream stream = jarResourceHandler.getResource(httpRequest);
 
                 if (stream != null) {
+                    httpResponse.setHeader(MimeType.CONTENT_TYPE, MimeType.fromRequest(httpRequest));
+
                     OutputStream wrappedOutputStream = GzipUtils.checkAndWrap(httpRequest, httpResponse, false);
                     customHeaders.forEach(httpResponse::setHeader); //add all user-defined headers to response
 
