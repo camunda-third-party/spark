@@ -16,9 +16,12 @@
  */
 package spark.embeddedserver;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
+
+import org.eclipse.jetty.server.Handler;
 
 import spark.embeddedserver.jetty.websocket.WebSocketHandlerWrapper;
 import spark.ssl.SslStores;
@@ -59,6 +62,10 @@ public interface EmbeddedServer {
                                      Optional<Integer> webSocketIdleTimeoutMillis) {
 
         NotSupportedException.raise(getClass().getSimpleName(), "Web Sockets");
+    }
+
+    default void configureAdditionalHandlers(List<Handler> additionalHandlers) {
+        NotSupportedException.raise(getClass().getSimpleName(), "Additional Handlers");
     }
 
     /**

@@ -55,6 +55,7 @@ public class EmbeddedJettyServer implements EmbeddedServer {
 
     private Map<String, WebSocketHandlerWrapper> webSocketHandlers;
     private Optional<Integer> webSocketIdleTimeoutMillis;
+    private List<Handler> additionalHandlers = new ArrayList<>();
 
     public EmbeddedJettyServer(Handler handler) {
         this.handler = handler;
@@ -66,6 +67,13 @@ public class EmbeddedJettyServer implements EmbeddedServer {
 
         this.webSocketHandlers = webSocketHandlers;
         this.webSocketIdleTimeoutMillis = webSocketIdleTimeoutMillis;
+    }
+
+    @Override
+    public void configureAdditionalHandlers(List<Handler> additionalHandlers) {
+        if (additionalHandlers != null) {
+            this.additionalHandlers.addAll(additionalHandlers);
+        }
     }
 
     /**
@@ -105,20 +113,17 @@ public class EmbeddedJettyServer implements EmbeddedServer {
         ServletContextHandler webSocketServletContextHandler =
                 WebSocketServletContextHandlerFactory.create(webSocketHandlers, webSocketIdleTimeoutMillis);
 
-        // Handle web socket routes
-        if (webSocketServletContextHandler == null) {
+        if (webSocketServletContextHandler != null) {
+            additionalHandlers.add(0, webSocketServletContextHandler);
+        }
+
+        if (additionalHandlers.isEmpty()) {
             server.setHandler(handler);
         } else {
-            List<Handler> handlersInList = new ArrayList<>();
-            handlersInList.add(handler);
-
-            // WebSocket handler must be the last one
-            if (webSocketServletContextHandler != null) {
-                handlersInList.add(webSocketServletContextHandler);
-            }
+            additionalHandlers.add(0, handler);
 
             HandlerList handlers = new HandlerList();
-            handlers.setHandlers(handlersInList.toArray(new Handler[handlersInList.size()]));
+            handlers.setHandlers(additionalHandlers.toArray(new Handler[additionalHandlers.size()]));
             server.setHandler(handlers);
         }
 

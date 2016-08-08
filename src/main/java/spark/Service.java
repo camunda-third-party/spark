@@ -16,11 +16,14 @@
  */
 package spark;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 
+import org.eclipse.jetty.server.Handler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -69,6 +72,8 @@ public final class Service extends Routable {
     protected int minThreads = -1;
     protected int threadIdleTimeoutMillis = -1;
     protected Optional<Integer> webSocketIdleTimeoutMillis = Optional.empty();
+
+    protected List<Handler> additionalHandlers;
 
     protected EmbeddedServer server;
     protected Routes routes;
@@ -319,6 +324,29 @@ public final class Service extends Routable {
     }
 
     /**
+     * Adds an additional handler for the server.
+     *
+     * @param additionalHandler the handler to add
+     */
+    public synchronized void additionalHandler(Handler additionalHandler) {
+        requireNonNull(additionalHandler, "Additional handler cannot be null");
+
+        if (initialized) {
+            throwBeforeRouteMappingException();
+        }
+
+        if (isRunningFromServlet()) {
+            throw new IllegalStateException("Additional handlers are only supported in the embedded server");
+        }
+
+        if (additionalHandlers == null) {
+            additionalHandlers = new ArrayList<>();
+        }
+
+        additionalHandlers.add(additionalHandler);
+    }
+
+    /**
      * Waits for the spark server to be initialized.
      * If it's already initialized will return immediately
      */
@@ -336,7 +364,7 @@ public final class Service extends Routable {
     }
 
     private boolean hasMultipleHandlers() {
-        return webSocketHandlers != null;
+        return webSocketHandlers != null || additionalHandlers != null;
     }
 
 
@@ -390,6 +418,7 @@ public final class Service extends Routable {
                                                     hasMultipleHandlers());
 
                     server.configureWebSockets(webSocketHandlers, webSocketIdleTimeoutMillis);
+                    server.configureAdditionalHandlers(additionalHandlers);
 
                     port = server.ignite(
                             ipAddress,
