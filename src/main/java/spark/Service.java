@@ -354,6 +354,9 @@ public final class Service extends Routable {
             staticFilesConfiguration.clear();
             initialized = false;
         }).start();
+
+        // clear exception mapper immediately
+        ExceptionMapper.getInstance().clear();
     }
 
     @Override

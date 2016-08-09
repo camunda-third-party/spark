@@ -60,6 +60,10 @@ public class ExceptionMapper {
         this.exceptionMap.put(exceptionClass, handler);
     }
 
+    public void clear() {
+        this.exceptionMap.clear();
+    }
+
     /**
      * Returns the handler associated with the provided exception class
      *
