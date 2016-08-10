@@ -73,7 +73,7 @@ public final class Service extends Routable {
     protected int threadIdleTimeoutMillis = -1;
     protected Optional<Integer> webSocketIdleTimeoutMillis = Optional.empty();
 
-    protected List<Handler> additionalHandlers;
+    protected List<Handler> staticFilesHandlers;
 
     protected EmbeddedServer server;
     protected Routes routes;
@@ -324,26 +324,26 @@ public final class Service extends Routable {
     }
 
     /**
-     * Adds an additional handler for the server.
+     * Adds a static files handler for the server.
      *
-     * @param additionalHandler the handler to add
+     * @param staticFilesHandler the handler to add
      */
-    public synchronized void additionalHandler(Handler additionalHandler) {
-        requireNonNull(additionalHandler, "Additional handler cannot be null");
+    public synchronized void staticFilesHandler(Handler staticFilesHandler) {
+        requireNonNull(staticFilesHandler, "Static files handler cannot be null");
 
         if (initialized) {
             throwBeforeRouteMappingException();
         }
 
         if (isRunningFromServlet()) {
-            throw new IllegalStateException("Additional handlers are only supported in the embedded server");
+            throw new IllegalStateException("Static files handlers are only supported in the embedded server");
         }
 
-        if (additionalHandlers == null) {
-            additionalHandlers = new ArrayList<>();
+        if (staticFilesHandlers == null) {
+            staticFilesHandlers = new ArrayList<>();
         }
 
-        additionalHandlers.add(additionalHandler);
+        staticFilesHandlers.add(staticFilesHandler);
     }
 
     /**
@@ -364,7 +364,7 @@ public final class Service extends Routable {
     }
 
     private boolean hasMultipleHandlers() {
-        return webSocketHandlers != null || additionalHandlers != null;
+        return webSocketHandlers != null || staticFilesHandlers != null;
     }
 
 
@@ -418,7 +418,7 @@ public final class Service extends Routable {
                                                     hasMultipleHandlers());
 
                     server.configureWebSockets(webSocketHandlers, webSocketIdleTimeoutMillis);
-                    server.configureAdditionalHandlers(additionalHandlers);
+                    server.configureStaticFilesHandlers(staticFilesHandlers);
 
                     port = server.ignite(
                             ipAddress,

@@ -55,7 +55,7 @@ public class EmbeddedJettyServer implements EmbeddedServer {
 
     private Map<String, WebSocketHandlerWrapper> webSocketHandlers;
     private Optional<Integer> webSocketIdleTimeoutMillis;
-    private List<Handler> additionalHandlers = new ArrayList<>();
+    private List<Handler> handlers = new ArrayList<>();
 
     public EmbeddedJettyServer(Handler handler) {
         this.handler = handler;
@@ -70,9 +70,9 @@ public class EmbeddedJettyServer implements EmbeddedServer {
     }
 
     @Override
-    public void configureAdditionalHandlers(List<Handler> additionalHandlers) {
-        if (additionalHandlers != null) {
-            this.additionalHandlers.addAll(additionalHandlers);
+    public void configureStaticFilesHandlers(List<Handler> staticFilesHandlers) {
+        if (staticFilesHandlers != null) {
+            this.handlers.addAll(staticFilesHandlers);
         }
     }
 
@@ -113,17 +113,17 @@ public class EmbeddedJettyServer implements EmbeddedServer {
         ServletContextHandler webSocketServletContextHandler =
                 WebSocketServletContextHandlerFactory.create(webSocketHandlers, webSocketIdleTimeoutMillis);
 
+        handlers.add(handler);
+
         if (webSocketServletContextHandler != null) {
-            additionalHandlers.add(0, webSocketServletContextHandler);
+            handlers.add(webSocketServletContextHandler);
         }
 
-        if (additionalHandlers.isEmpty()) {
-            server.setHandler(handler);
+        if (handlers.size() < 2) {
+            server.setHandler(handlers.get(0));
         } else {
-            additionalHandlers.add(0, handler);
-
             HandlerList handlers = new HandlerList();
-            handlers.setHandlers(additionalHandlers.toArray(new Handler[additionalHandlers.size()]));
+            handlers.setHandlers(this.handlers.toArray(new Handler[this.handlers.size()]));
             server.setHandler(handlers);
         }
 

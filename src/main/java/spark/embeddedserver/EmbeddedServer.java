@@ -64,8 +64,8 @@ public interface EmbeddedServer {
         NotSupportedException.raise(getClass().getSimpleName(), "Web Sockets");
     }
 
-    default void configureAdditionalHandlers(List<Handler> additionalHandlers) {
-        NotSupportedException.raise(getClass().getSimpleName(), "Additional Handlers");
+    default void configureStaticFilesHandlers(List<Handler> staticFilesHandlers) {
+        NotSupportedException.raise(getClass().getSimpleName(), "Static Files Handlers");
     }
 
     /**
