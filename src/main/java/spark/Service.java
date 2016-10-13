@@ -60,6 +60,7 @@ public final class Service extends Routable {
     protected boolean initialized = false;
 
     protected int port = SPARK_DEFAULT_PORT;
+    protected Integer managementPort;
     protected String ipAddress = "0.0.0.0";
 
     protected SslStores sslStores;
@@ -143,6 +144,14 @@ public final class Service extends Routable {
             throwBeforeRouteMappingException();
         }
         this.port = port;
+        return this;
+    }
+
+    public synchronized Service managementPort(int managementPort) {
+        if (initialized) {
+            throwBeforeRouteMappingException();
+        }
+        this.managementPort = managementPort;
         return this;
     }
 
@@ -440,6 +449,7 @@ public final class Service extends Routable {
                     port = server.ignite(
                             ipAddress,
                             port,
+                            Optional.ofNullable(managementPort),
                             sslStores,
                             latch,
                             maxThreads,

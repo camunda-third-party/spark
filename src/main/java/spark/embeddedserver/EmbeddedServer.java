@@ -38,6 +38,7 @@ public interface EmbeddedServer {
      *
      * @param host                    The address to listen on
      * @param port                    - the port
+     * @param managementPort          - the management port to use
      * @param sslStores               - The SSL sslStores.
      * @param latch                   - the countdown latch
      * @param maxThreads              - max nbr of threads.
@@ -47,6 +48,7 @@ public interface EmbeddedServer {
      */
     int ignite(String host,
                int port,
+               Optional<Integer> managementPort,
                SslStores sslStores,
                CountDownLatch latch,
                int maxThreads,

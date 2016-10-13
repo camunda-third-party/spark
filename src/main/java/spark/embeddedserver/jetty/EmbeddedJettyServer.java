@@ -24,7 +24,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 
-import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
@@ -90,6 +89,7 @@ public class EmbeddedJettyServer implements EmbeddedServer {
     @Override
     public int ignite(String host,
                       int port,
+                      Optional<Integer> managementPort,
                       SslStores sslStores,
                       CountDownLatch latch,
                       int maxThreads,
@@ -107,16 +107,29 @@ public class EmbeddedJettyServer implements EmbeddedServer {
 
         server = JettyServer.create(maxThreads, minThreads, threadIdleTimeoutMillis);
 
-        ServerConnector connector;
 
+        ServerConnector connector;
         if (sslStores == null) {
             connector = SocketConnectorFactory.createSocketConnector(server, host, port);
         } else {
             connector = SocketConnectorFactory.createSecureSocketConnector(server, host, port, sslStores);
         }
 
-        server = connector.getServer();
-        server.setConnectors(new Connector[] {connector});
+        connector.setName("public");
+        server.addConnector(connector);
+
+        if (managementPort.isPresent()) {
+            ServerConnector manageConnector;
+            int managePort = managementPort.get();
+            if (sslStores == null) {
+                manageConnector = SocketConnectorFactory.createSocketConnector(server, host, managePort);
+            }
+            else {
+                manageConnector = SocketConnectorFactory.createSecureSocketConnector(server, host, managePort, sslStores);
+            }
+            manageConnector.setName("management");
+            server.addConnector(manageConnector);
+        }
 
         Handler handler = initHandler();
 
@@ -125,6 +138,9 @@ public class EmbeddedJettyServer implements EmbeddedServer {
         try {
             logger.info("== {} has ignited ...", NAME);
             logger.info(">> Listening on {}:{}", host, port);
+            if (managementPort.isPresent()) {
+                logger.info(">> Management on {}:{}", host, managementPort.get());
+            }
 
             server.start();
             latch.countDown();
