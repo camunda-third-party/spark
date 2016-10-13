@@ -22,6 +22,7 @@ import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 
 import org.eclipse.jetty.server.Handler;
+import org.eclipse.jetty.server.handler.StatisticsHandler;
 
 import spark.embeddedserver.jetty.websocket.WebSocketHandlerWrapper;
 import spark.ssl.SslStores;
@@ -64,12 +65,17 @@ public interface EmbeddedServer {
         NotSupportedException.raise(getClass().getSimpleName(), "Web Sockets");
     }
 
-    default void configureStaticFilesHandlers(List<Handler> staticFilesHandlers) {
-        NotSupportedException.raise(getClass().getSimpleName(), "Static Files Handlers");
+    default void configureAdditionalHandlers(List<Handler> additionalHandlers) {
+        NotSupportedException.raise(getClass().getSimpleName(), "Handlers");
+    }
+
+    default void configureStatisticsHandler(StatisticsHandler statisticsHandler) {
+        NotSupportedException.raise(getClass().getSimpleName(), "Statistics Handler");
     }
 
     /**
      * Extinguish the embedded server.
      */
     void extinguish();
+
 }

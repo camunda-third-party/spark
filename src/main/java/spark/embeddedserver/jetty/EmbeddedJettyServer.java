@@ -29,6 +29,7 @@ import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.handler.HandlerList;
+import org.eclipse.jetty.server.handler.StatisticsHandler;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,7 +49,6 @@ public class EmbeddedJettyServer implements EmbeddedServer {
     private static final int SPARK_DEFAULT_PORT = 4567;
     private static final String NAME = "Spark";
 
-    private Handler handler;
     private Server server;
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
@@ -56,9 +56,10 @@ public class EmbeddedJettyServer implements EmbeddedServer {
     private Map<String, WebSocketHandlerWrapper> webSocketHandlers;
     private Optional<Integer> webSocketIdleTimeoutMillis;
     private List<Handler> handlers = new ArrayList<>();
+    private StatisticsHandler statisticsHandler;
 
-    public EmbeddedJettyServer(Handler handler) {
-        this.handler = handler;
+    public EmbeddedJettyServer(Handler sparkHandler) {
+        this.handlers.add(sparkHandler);
     }
 
     @Override
@@ -70,9 +71,16 @@ public class EmbeddedJettyServer implements EmbeddedServer {
     }
 
     @Override
-    public void configureStaticFilesHandlers(List<Handler> staticFilesHandlers) {
-        if (staticFilesHandlers != null) {
-            this.handlers.addAll(staticFilesHandlers);
+    public void configureAdditionalHandlers(List<Handler> additionalHandlers) {
+        if (additionalHandlers != null) {
+            this.handlers.addAll(0, additionalHandlers);
+        }
+    }
+
+    @Override
+    public void configureStatisticsHandler(StatisticsHandler statisticsHandler) {
+        if (statisticsHandler != null) {
+            this.statisticsHandler = statisticsHandler;
         }
     }
 
@@ -110,22 +118,9 @@ public class EmbeddedJettyServer implements EmbeddedServer {
         server = connector.getServer();
         server.setConnectors(new Connector[] {connector});
 
-        ServletContextHandler webSocketServletContextHandler =
-                WebSocketServletContextHandlerFactory.create(webSocketHandlers, webSocketIdleTimeoutMillis);
+        Handler handler = initHandler();
 
-        handlers.add(handler);
-
-        if (webSocketServletContextHandler != null) {
-            handlers.add(webSocketServletContextHandler);
-        }
-
-        if (handlers.size() < 2) {
-            server.setHandler(handlers.get(0));
-        } else {
-            HandlerList handlers = new HandlerList();
-            handlers.setHandlers(this.handlers.toArray(new Handler[this.handlers.size()]));
-            server.setHandler(handlers);
-        }
+        server.setHandler(handler);
 
         try {
             logger.info("== {} has ignited ...", NAME);
@@ -140,6 +135,36 @@ public class EmbeddedJettyServer implements EmbeddedServer {
         }
 
         return port;
+    }
+
+    private Handler initHandler() {
+
+        ServletContextHandler webSocketServletContextHandler =
+                WebSocketServletContextHandlerFactory.create(webSocketHandlers, webSocketIdleTimeoutMillis);
+
+        if (webSocketServletContextHandler != null) {
+            handlers.add(webSocketServletContextHandler);
+        }
+
+        Handler handler;
+
+        if (handlers.size() < 2) {
+            // use single handler as jetty handler
+            handler = handlers.get(0);
+        } else {
+            // use handler list as jetty handler
+            HandlerList handlers = new HandlerList();
+            handlers.setHandlers(this.handlers.toArray(new Handler[this.handlers.size()]));
+            handler = handlers;
+        }
+
+        if (statisticsHandler != null) {
+            // wrap handler handler with statistics handler
+            statisticsHandler.setHandler(handler);
+            handler = statisticsHandler;
+        }
+
+        return handler;
     }
 
     /**

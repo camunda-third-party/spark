@@ -24,6 +24,7 @@ import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 
 import org.eclipse.jetty.server.Handler;
+import org.eclipse.jetty.server.handler.StatisticsHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -73,7 +74,8 @@ public final class Service extends Routable {
     protected int threadIdleTimeoutMillis = -1;
     protected Optional<Integer> webSocketIdleTimeoutMillis = Optional.empty();
 
-    protected List<Handler> staticFilesHandlers;
+    protected List<Handler> additionalHandlers;
+    protected StatisticsHandler statisticsHandler;
 
     protected EmbeddedServer server;
     protected Routes routes;
@@ -324,26 +326,40 @@ public final class Service extends Routable {
     }
 
     /**
-     * Adds a static files handler for the server.
+     * Adds a jetty handler for the embedded server.
      *
-     * @param staticFilesHandler the handler to add
+     * @param handler the handler to add
      */
-    public synchronized void staticFilesHandler(Handler staticFilesHandler) {
-        requireNonNull(staticFilesHandler, "Static files handler cannot be null");
+    public synchronized void additionalHandler(Handler handler) {
+        requireNonNull(handler, "Handler cannot be null");
 
         if (initialized) {
             throwBeforeRouteMappingException();
         }
 
         if (isRunningFromServlet()) {
-            throw new IllegalStateException("Static files handlers are only supported in the embedded server");
+            throw new IllegalStateException("Handlers are only supported in the embedded server");
         }
 
-        if (staticFilesHandlers == null) {
-            staticFilesHandlers = new ArrayList<>();
+        if (additionalHandlers == null) {
+            additionalHandlers = new ArrayList<>();
         }
 
-        staticFilesHandlers.add(staticFilesHandler);
+        additionalHandlers.add(handler);
+    }
+
+    public synchronized void statisticsHandler(StatisticsHandler statisticsHandler) {
+        requireNonNull(statisticsHandler, "Statistics handler cannot be null");
+
+        if (initialized) {
+            throwBeforeRouteMappingException();
+        }
+
+        if (isRunningFromServlet()) {
+            throw new IllegalStateException("Statistics handler is only supported in the embedded server");
+        }
+
+        this.statisticsHandler = statisticsHandler;
     }
 
     /**
@@ -364,7 +380,7 @@ public final class Service extends Routable {
     }
 
     private boolean hasMultipleHandlers() {
-        return webSocketHandlers != null || staticFilesHandlers != null;
+        return webSocketHandlers != null || additionalHandlers != null;
     }
 
 
@@ -418,7 +434,8 @@ public final class Service extends Routable {
                                                     hasMultipleHandlers());
 
                     server.configureWebSockets(webSocketHandlers, webSocketIdleTimeoutMillis);
-                    server.configureStaticFilesHandlers(staticFilesHandlers);
+                    server.configureAdditionalHandlers(additionalHandlers);
+                    server.configureStatisticsHandler(statisticsHandler);
 
                     port = server.ignite(
                             ipAddress,
